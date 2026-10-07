@@ -148,4 +148,297 @@ local function createHat()
     elseif kind == "tophat" then
         local base = add(newPart("HatBase", Enum.PartType.Cylinder, Vector3.new(0.1, 2.6, 2.6), Color3.fromRGB(20,20,20)))
         weldPart(base, head, CFrame.new(0, hH*0.5 + 0.05, 0) * CFrame.Angles(0,0,math.rad(90)))
-        local tube = add(newPart("HatTube", Enum
+        local tube = add(newPart("HatTube", Enum.PartType.Cylinder, Vector3.new(1.6, 1.7, 1.7), Color3.fromRGB(15,15,15)))
+        weldPart(tube, head, CFrame.new(0, hH*0.5 + 0.85, 0) * CFrame.Angles(0,0,math.rad(90)))
+        local band = add(newPart("HatBand", Enum.PartType.Cylinder, Vector3.new(0.35, 1.72, 1.72), Color3.fromRGB(200,20,20)))
+        weldPart(band, head, CFrame.new(0, hH*0.5 + 0.25, 0) * CFrame.Angles(0,0,math.rad(90)))
+
+    elseif kind == "crown" then
+        local ring = add(newPart("CrownRing", Enum.PartType.Cylinder, Vector3.new(0.3, 2.2, 2.2), Color3.fromRGB(255,200,50), Enum.Material.Neon))
+        weldPart(ring, head, CFrame.new(0, hH*0.5 + 0.15, 0) * CFrame.Angles(0,0,math.rad(90)))
+        for i = 1, 8 do
+            local a = (i / 8) * math.pi * 2
+            local spike = add(newPart("Spike"..i, Enum.PartType.Ball, Vector3.new(0.35,0.35,0.9), Color3.fromRGB(255,220,60), Enum.Material.Neon))
+            weldPart(spike, head, CFrame.new(math.cos(a)*1.05, hH*0.5 + 0.55, math.sin(a)*1.05))
+        end
+
+    elseif kind == "party" then
+        local cone = add(newPart("PartyCone", Enum.PartType.Cylinder, Vector3.new(1.8, 0.9, 0.9), Color3.fromRGB(255,50,150), Enum.Material.Neon))
+        local m = Instance.new("SpecialMesh"); m.MeshType = Enum.MeshType.Wedge; m.Parent = cone
+        weldPart(cone, head, CFrame.new(0, hH*0.5 + 0.95, 0) * CFrame.Angles(0,0,math.rad(90)))
+        local pom = add(newPart("Pom", Enum.PartType.Ball, Vector3.new(0.6,0.6,0.6), Color3.fromRGB(255,255,100), Enum.Material.Neon))
+        weldPart(pom, head, CFrame.new(0, hH*0.5 + 2.1, 0))
+
+    elseif kind == "helmet" then
+        local dome = add(newPart("HelmetDome", Enum.PartType.Ball, Vector3.new(1.6,1.6,1.6), Color3.fromRGB(80,80,90), Enum.Material.Metal))
+        weldPart(dome, head, CFrame.new(0, hH*0.5 + 0.3, 0))
+        local visor = add(newPart("Visor", Enum.PartType.Block, Vector3.new(1.6, 0.35, 0.15), Color3.fromRGB(0,200,255), Enum.Material.Neon))
+        weldPart(visor, head, CFrame.new(0, hH*0.5 + 0.4, -0.75))
+
+    elseif kind == "halo" then
+        local ring = add(newPart("Halo", Enum.PartType.Cylinder, Vector3.new(0.15, 2, 2), Color3.fromRGB(255,240,150), Enum.Material.Neon))
+        weldPart(ring, head, CFrame.new(0, hH*0.5 + 1.1, 0) * CFrame.Angles(0,0,math.rad(90)))
+
+    elseif kind == "horns" then
+        for s = -1, 1, 2 do
+            local horn = add(newPart("Horn"..s, Enum.PartType.Cylinder, Vector3.new(0.8, 0.25, 0.25), Color3.fromRGB(60,0,0)))
+            weldPart(horn, head, CFrame.new(s*0.55, hH*0.5 + 0.65, 0) * CFrame.Angles(0,0,math.rad(90 + s*20)))
+        end
+
+    elseif kind == "wreath" then
+        for i = 1, 12 do
+            local a = (i / 12) * math.pi * 2
+            local flower = add(newPart("Flower"..i, Enum.PartType.Ball, Vector3.new(0.3,0.3,0.3), Color3.fromHSV(i/12, 0.7, 1), Enum.Material.Neon))
+            weldPart(flower, head, CFrame.new(math.cos(a)*1.15, hH*0.5 + 0.35, math.sin(a)*1.15))
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════
+--  SKY
+-- ═══════════════════════════════════════════════
+local function cacheLighting()
+    if Refs.OrigProps then return end
+    Refs.OrigSky = Lighting:FindFirstChildOfClass("Sky")
+    Refs.OrigProps = {
+        Ambient = Lighting.Ambient,
+        OutdoorAmbient = Lighting.OutdoorAmbient,
+        Brightness = Lighting.Brightness,
+        ClockTime = Lighting.ClockTime,
+        FogEnd = Lighting.FogEnd,
+        FogStart = Lighting.FogStart,
+        FogColor = Lighting.FogColor,
+        EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
+        EnvironmentSpecularScale = Lighting.EnvironmentSpecularScale,
+    }
+end
+
+local function applySky()
+    cacheLighting()
+    if not State.Sky then
+        if Refs.CustomSky then Refs.CustomSky:Destroy(); Refs.CustomSky = nil end
+        if Refs.OrigSky and not Refs.OrigSky.Parent then Refs.OrigSky.Parent = Lighting end
+        for k, v in pairs(Refs.OrigProps) do Lighting[k] = v end
+        return
+    end
+
+    local p = FX.SKY_PRESETS[State.SkyType]; if not p then return end
+
+    if Refs.OrigSky then Refs.OrigSky.Parent = nil end
+    if Refs.CustomSky then Refs.CustomSky:Destroy() end
+
+    local sky = Instance.new("Sky")
+    sky.SkyboxBk = "rbxassetid://"..p.ids[1]
+    sky.SkyboxDn = "rbxassetid://"..p.ids[2]
+    sky.SkyboxFt = "rbxassetid://"..p.ids[3]
+    sky.SkyboxLf = "rbxassetid://"..p.ids[4]
+    sky.SkyboxRt = "rbxassetid://"..p.ids[5]
+    sky.SkyboxUp = "rbxassetid://"..p.ids[6]
+    sky.StarCount = p.stars or 3000
+    sky.Parent = Lighting
+    Refs.CustomSky = sky
+
+    Lighting.Ambient = p.ambient
+    Lighting.OutdoorAmbient = p.ambient
+    Lighting.Brightness = p.bright
+    Lighting.ClockTime = p.clock
+    Lighting.FogEnd = p.fog
+    Lighting.FogColor = p.fogC
+end
+
+-- ═══════════════════════════════════════════════
+--  AURA
+-- ═══════════════════════════════════════════════
+local function destroyAura()
+    for _, p in ipairs(Refs.AuraParts) do if p and p.Parent then p:Destroy() end end
+    Refs.AuraParts = {}
+    if Refs.AuraLoop then Refs.AuraLoop:Disconnect(); Refs.AuraLoop = nil end
+end
+
+local function createAura()
+    destroyAura()
+    local char = LP.Character; if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+
+    local kind = FX.AURA_PRESETS[State.AuraType] or "glow"
+
+    if kind == "glow" then
+        local light = Instance.new("PointLight")
+        light.Name = "BarnyAuraGlow"
+        light.Range = 15; light.Brightness = 3
+        light.Color = Color3.fromRGB(150, 80, 255)
+        light.Parent = hrp
+        table.insert(Refs.AuraParts, light)
+        Refs.AuraLoop = RS.Heartbeat:Connect(function()
+            light.Color = Color3.fromHSV((os.clock()*0.3)%1, 0.8, 1)
+        end)
+
+    elseif kind == "particles" then
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Texture = "rbxassetid://243098098"
+        emitter.Rate = 30
+        emitter.Lifetime = NumberRange.new(0.8, 1.5)
+        emitter.Speed = NumberRange.new(2, 4)
+        emitter.SpreadAngle = Vector2.new(180, 180)
+        emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0)})
+        emitter.Color = ColorSequence.new(Color3.fromRGB(150, 80, 255), Color3.fromRGB(255, 100, 200))
+        emitter.LightEmission = 1
+        emitter.Parent = hrp
+        table.insert(Refs.AuraParts, emitter)
+
+    elseif kind == "fire" then
+        local fire = Instance.new("Fire")
+        fire.Heat = 10; fire.Size = 6
+        fire.Color = Color3.fromRGB(255, 150, 30)
+        fire.SecondaryColor = Color3.fromRGB(255, 50, 0)
+        fire.Parent = hrp
+        table.insert(Refs.AuraParts, fire)
+
+    elseif kind == "snow" then
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Texture = "rbxassetid://243660364"
+        emitter.Rate = 40
+        emitter.Lifetime = NumberRange.new(2, 3)
+        emitter.Speed = NumberRange.new(1, 3)
+        emitter.SpreadAngle = Vector2.new(20, 20)
+        emitter.Size = NumberSequence.new(0.4)
+        emitter.Color = ColorSequence.new(Color3.fromRGB(230, 240, 255))
+        emitter.Parent = hrp
+        table.insert(Refs.AuraParts, emitter)
+
+    elseif kind == "sparks" then
+        local sparkles = Instance.new("Sparkles")
+        sparkles.SparkleColor = Color3.fromRGB(255, 240, 100)
+        sparkles.Parent = hrp
+        table.insert(Refs.AuraParts, sparkles)
+
+    elseif kind == "lightning" then
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Texture = "rbxassetid://243098098"
+        emitter.Rate = 15
+        emitter.Lifetime = NumberRange.new(0.2, 0.4)
+        emitter.Speed = NumberRange.new(8, 14)
+        emitter.SpreadAngle = Vector2.new(180, 180)
+        emitter.Size = NumberSequence.new(0.4)
+        emitter.Color = ColorSequence.new(Color3.fromRGB(120, 200, 255))
+        emitter.LightEmission = 1
+        emitter.Parent = hrp
+        table.insert(Refs.AuraParts, emitter)
+    end
+end
+
+-- ═══════════════════════════════════════════════
+--  WORLD
+-- ═══════════════════════════════════════════════
+local function clearWorldFX()
+    for _, fx in ipairs(Refs.WorldFX) do if fx and fx.Parent then fx:Destroy() end end
+    Refs.WorldFX = {}
+end
+
+local function applyWorldFX()
+    clearWorldFX()
+    if not State.World then return end
+    local p = FX.WORLD_PRESETS[State.WorldType]; if not p then return end
+
+    cacheLighting()
+    Lighting.Ambient = p.ambient
+    Lighting.Brightness = p.bright
+    Lighting.ClockTime = p.clock
+    Lighting.FogEnd = p.fog
+    Lighting.FogColor = p.fogC
+
+    if p.cc == "grayscale" then
+        local cc = Instance.new("ColorCorrectionEffect"); cc.Saturation = -1; cc.Parent = Lighting
+        table.insert(Refs.WorldFX, cc)
+    elseif p.cc == "invert" then
+        local cc = Instance.new("ColorCorrectionEffect"); cc.Contrast = -1; cc.Brightness = -0.2; cc.Saturation = -1; cc.Parent = Lighting
+        table.insert(Refs.WorldFX, cc)
+    elseif p.cc == "sepia" then
+        local cc = Instance.new("ColorCorrectionEffect"); cc.TintColor = Color3.fromRGB(255,220,180); cc.Saturation = -0.6; cc.Parent = Lighting
+        table.insert(Refs.WorldFX, cc)
+    end
+end
+
+-- ═══════════════════════════════════════════════
+--  BUILD TABS
+-- ═══════════════════════════════════════════════
+local pageTrail = createTab("След", 1)
+makeSection(pageTrail, "Тип следа", 1)
+makeDropdown(pageTrail, "Вид", sortedKeys(FX.TRAIL_PRESETS), 2, function(v)
+    State.TrailType = v; if State.Trail then createTrail(LP.Character) end
+end)
+makeToggle(pageTrail, "Включить след", Color3.fromRGB(45,25,70), Color3.fromRGB(120,50,200), 3, function(setV)
+    State.Trail = not State.Trail
+    setV(State.Trail)
+    if State.Trail then createTrail(LP.Character) else destroyTrail() end
+end)
+
+local pageHat = createTab("Шапка", 2)
+makeSection(pageHat, "Вид шапки", 1)
+makeDropdown(pageHat, "Вид", sortedKeys(FX.HAT_PRESETS), 2, function(v)
+    State.HatType = v; if State.Hat then createHat() end
+end)
+makeToggle(pageHat, "Включить шапку", Color3.fromRGB(70,25,25), Color3.fromRGB(200,50,50), 3, function(setV)
+    State.Hat = not State.Hat
+    setV(State.Hat)
+    if State.Hat then createHat() else destroyHat() end
+end)
+
+local pageSky = createTab("Небо", 3)
+makeSection(pageSky, "16 пресетов", 1)
+makeDropdown(pageSky, "Вид", sortedKeys(FX.SKY_PRESETS), 2, function(v)
+    State.SkyType = v; if State.Sky then applySky() end
+end)
+makeToggle(pageSky, "Включить небо", Color3.fromRGB(25,25,70), Color3.fromRGB(50,100,220), 3, function(setV)
+    State.Sky = not State.Sky
+    setV(State.Sky)
+    applySky()
+end)
+
+local pageAura = createTab("Аура", 4)
+makeSection(pageAura, "Эффект вокруг", 1)
+makeDropdown(pageAura, "Вид", sortedKeys(FX.AURA_PRESETS), 2, function(v)
+    State.AuraType = v; if State.Aura then createAura() end
+end)
+makeToggle(pageAura, "Включить ауру", Color3.fromRGB(60,25,80), Color3.fromRGB(180,60,230), 3, function(setV)
+    State.Aura = not State.Aura
+    setV(State.Aura)
+    if State.Aura then createAura() else destroyAura() end
+end)
+
+local pageWorld = createTab("Мир", 5)
+makeSection(pageWorld, "Окружение", 1)
+makeDropdown(pageWorld, "Вид", sortedKeys(FX.WORLD_PRESETS), 2, function(v)
+    State.WorldType = v; if State.World then applyWorldFX() end
+end)
+makeToggle(pageWorld, "Включить эффект", Color3.fromRGB(25,40,60), Color3.fromRGB(40,120,200), 3, function(setV)
+    State.World = not State.World
+    setV(State.World)
+    applyWorldFX()
+end)
+
+-- Активировать первую вкладку
+if FX.Tabs["След"] then
+    FX.Tabs["След"].btn.BackgroundColor3 = Color3.fromRGB(120, 50, 200)
+    FX.Tabs["След"].btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FX.Tabs["След"].page.Visible = true
+end
+
+-- ═══════════════════════════════════════════════
+--  RESPAWN + CLOSE
+-- ═══════════════════════════════════════════════
+LP.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    if State.Trail then createTrail(char) end
+    if State.Hat then createHat() end
+    if State.Aura then createAura() end
+end)
+
+game:BindToClose(function()
+    pcall(destroyTrail); pcall(destroyHat); pcall(destroyAura)
+    if State.Sky then pcall(applySky) end
+    pcall(clearWorldFX)
+end)
+
+FX.StatusBar.Text = "Загружено ✓ • 5 вкладок • 16 небес • LocalScript"
+print("[Barny] Part 2/2 — визуалы загружены")
