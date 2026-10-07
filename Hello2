@@ -1,0 +1,151 @@
+--[[
+    Barny Visual FX v4 — PART 2/2
+    Модули: След, Шапка, Небо, Аура, Мир + сборка вкладок
+    ⚠ Вставляй сразу ПОСЛЕ Части 1 в тот же LocalScript.
+]]
+
+local FX = _G.BarnyFX
+if not FX then
+    warn("[Barny] Сначала загрузи Часть 1!")
+    return
+end
+
+local Players  = FX.Players
+local RS       = FX.RS
+local Lighting = FX.Lighting
+local Tween    = FX.Tween
+local LP       = FX.LP
+
+local State    = FX.State
+local Refs     = FX.Refs
+local corner   = FX.corner
+local stroke   = FX.stroke
+local createTab = FX.createTab
+local makeToggle = FX.makeToggle
+local makeSection = FX.makeSection
+local makeDropdown = FX.makeDropdown
+local sortedKeys = FX.sortedKeys
+
+-- ═══════════════════════════════════════════════
+--  TRAIL
+-- ═══════════════════════════════════════════════
+local function destroyTrail()
+    for _, k in ipairs({"Trail","TrailA0","TrailA1"}) do
+        local o = Refs[k]; if o and o.Parent then o:Destroy() end; Refs[k]=nil
+    end
+    if Refs.TrailLight and Refs.TrailLight.Parent then Refs.TrailLight:Destroy() end
+    Refs.TrailLight = nil
+end
+
+local function createTrail(char)
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+    destroyTrail()
+
+    local preset = FX.TRAIL_PRESETS[State.TrailType] or FX.TRAIL_PRESETS["Радуга"]
+
+    local a0 = Instance.new("Attachment"); a0.Position = Vector3.new(0,-2.6,0); a0.Parent = hrp; Refs.TrailA0 = a0
+    local a1 = Instance.new("Attachment"); a1.Position = Vector3.new(0,0.6,0);  a1.Parent = hrp; Refs.TrailA1 = a1
+
+    local trail = Instance.new("Trail")
+    trail.Attachment0 = a0
+    trail.Attachment1 = a1
+    trail.Lifetime = 0.7
+    trail.MinLength = 0
+    trail.FaceCamera = true
+    trail.LightEmission = 1
+    trail.LightInfluence = 0
+    trail.WidthScale = NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(1,0)})
+    trail.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0,0.05),
+        NumberSequenceKeypoint.new(0.7,0.35),
+        NumberSequenceKeypoint.new(1,1),
+    })
+
+    if preset.mode == "galaxy" then
+        trail.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(80,0,180)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,50,200)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0,150,255)),
+        })
+    else
+        trail.Color = ColorSequence.new(preset.color or Color3.fromRGB(255,0,0))
+    end
+    trail.Parent = hrp
+    Refs.Trail = trail
+
+    local light = Instance.new("PointLight")
+    light.Range = 12; light.Brightness = 2.5
+    light.Color = preset.color or Color3.fromRGB(255,0,0)
+    light.Parent = hrp
+    Refs.TrailLight = light
+end
+
+RS.Heartbeat:Connect(function()
+    if not State.Trail or not Refs.Trail or not Refs.Trail.Parent then return end
+    local preset = FX.TRAIL_PRESETS[State.TrailType]; if not preset then return end
+    local mode = preset.mode or "static"
+    local t = os.clock()
+
+    if mode == "hsv" then
+        Refs.Trail.Color = ColorSequence.new(Color3.fromHSV((t*0.45)%1,1,1))
+    elseif mode == "pulse" then
+        local k = 0.5 + 0.5 * math.sin(t * 4)
+        local c = preset.color:Lerp(Color3.new(1,1,1), k * 0.4)
+        Refs.Trail.Color = ColorSequence.new(c)
+    elseif mode == "fire" then
+        local k = 0.7 + 0.3 * math.sin(t * 8)
+        Refs.Trail.Color = ColorSequence.new(preset.color:Lerp(Color3.fromRGB(255,220,50), k))
+    elseif mode == "galaxy" then
+        local hue = (t * 0.3) % 1
+        Refs.Trail.Color = ColorSequence.new(Color3.fromHSV(hue, 0.8, 1))
+    end
+
+    if Refs.TrailLight and Refs.TrailLight.Parent then
+        Refs.TrailLight.Color = Refs.Trail.Color.Keypoints[1].Value
+    end
+end)
+
+-- ═══════════════════════════════════════════════
+--  HAT
+-- ═══════════════════════════════════════════════
+local function destroyHat()
+    for _, p in ipairs(Refs.HatParts) do if p and p.Parent then p:Destroy() end end
+    Refs.HatParts = {}
+end
+
+local function newPart(name, shape, size, color, material)
+    local p = Instance.new("Part")
+    p.Name = name; p.Shape = shape; p.Size = size; p.Color = color
+    p.Material = material or Enum.Material.SmoothPlastic
+    p.CanCollide = false; p.Massless = true
+    return p
+end
+
+local function weldPart(part, head, cframe)
+    local w = Instance.new("Weld")
+    w.Part0 = head; w.Part1 = part; w.C0 = cframe; w.Parent = part
+end
+
+local function createHat()
+    local char = LP.Character; if not char then return end
+    local head = char:FindFirstChild("Head"); if not head then return end
+    destroyHat()
+
+    local hH = head.Size.Y
+    local kind = FX.HAT_PRESETS[State.HatType] or "cone"
+    local function add(p) p.Parent = char; table.insert(Refs.HatParts, p); return p end
+
+    if kind == "cone" then
+        local brim = add(newPart("HatBrim", Enum.PartType.Cylinder, Vector3.new(0.15, 3, 3), Color3.fromRGB(220,40,40)))
+        weldPart(brim, head, CFrame.new(0, hH*0.5 + 0.15, 0) * CFrame.Angles(0,0,math.rad(90)))
+        local cone = add(newPart("HatCone", Enum.PartType.Cylinder, Vector3.new(1.4, 0.9, 0.9), Color3.fromRGB(240,60,60)))
+        local m = Instance.new("SpecialMesh"); m.MeshType = Enum.MeshType.Wedge; m.Scale = Vector3.new(1,0.7,1); m.Parent = cone
+        weldPart(cone, head, CFrame.new(0, hH*0.5 + 0.9, 0) * CFrame.Angles(0,0,math.rad(90)))
+        local top = add(newPart("HatTop", Enum.PartType.Ball, Vector3.new(0.5,0.5,0.5), Color3.fromRGB(255,215,0), Enum.Material.Neon))
+        weldPart(top, head, CFrame.new(0, hH*0.5 + 1.7, 0))
+
+    elseif kind == "tophat" then
+        local base = add(newPart("HatBase", Enum.PartType.Cylinder, Vector3.new(0.1, 2.6, 2.6), Color3.fromRGB(20,20,20)))
+        weldPart(base, head, CFrame.new(0, hH*0.5 + 0.05, 0) * CFrame.Angles(0,0,math.rad(90)))
+        local tube = add(newPart("HatTube", Enum
